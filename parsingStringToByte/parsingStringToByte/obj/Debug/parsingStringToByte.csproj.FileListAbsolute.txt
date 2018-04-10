@@ -1,0 +1,7 @@
+c:\users\eltra\source\repos\parsingStringToByte\parsingStringToByte\bin\Debug\parsingStringToByte.exe.config
+c:\users\eltra\source\repos\parsingStringToByte\parsingStringToByte\bin\Debug\parsingStringToByte.exe
+c:\users\eltra\source\repos\parsingStringToByte\parsingStringToByte\bin\Debug\parsingStringToByte.pdb
+c:\users\eltra\source\repos\parsingStringToByte\parsingStringToByte\obj\Debug\parsingStringToByte.csprojResolveAssemblyReference.cache
+c:\users\eltra\source\repos\parsingStringToByte\parsingStringToByte\obj\Debug\parsingStringToByte.csproj.CoreCompileInputs.cache
+c:\users\eltra\source\repos\parsingStringToByte\parsingStringToByte\obj\Debug\parsingStringToByte.exe
+c:\users\eltra\source\repos\parsingStringToByte\parsingStringToByte\obj\Debug\parsingStringToByte.pdb
