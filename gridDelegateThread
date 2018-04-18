@@ -1,0 +1,152 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+
+namespace dataTable3
+{
+    /// <summary>
+    /// Logica di interazione per MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+       
+        //it should be an event handler delegate
+
+        public delegate void GenerateNum(int num,int index);
+        public delegate void mydelegate(int index2);
+        
+        static int[] num = new int[256];
+        static TextBox[] txt = new TextBox[256];
+        RowDefinition[] r_array =new RowDefinition[16];
+        ColumnDefinition[] c_array = new ColumnDefinition[16];
+        int k;
+
+        //thread
+        private void th()
+        {
+            //generate random number in the textbox 
+
+            Random rnd = new Random();
+            for(int i = 0; i < 16; i++)
+            {
+                
+                 int num = rnd.Next();
+                //invoke get the control of delegate 
+                Thread.Sleep(500);
+                txt[0].Dispatcher.Invoke(new GenerateNum(this.GenerateNumGUI),
+                   new Object[] { num, i});
+
+
+                //if txts change here it has to show us the message
+              
+                
+                
+
+
+                // control the PB
+                myPB.Dispatcher.Invoke(new mydelegate(this.UpdateBar), new Object[] {i});
+                
+            }
+           // myPB.Dispatcher.Invoke(new GenerateNum(this.GenerateNumGUI), new Object[] { num, 0, 1 });
+
+
+
+        }
+
+        public void GenerateNumGUI(int num,int index)
+        {
+            txt[index].Text = String.Format("0x{0:X2}", num);
+            //this.done = done;
+        }
+        public MainWindow()
+        {
+            InitializeComponent();
+            myPB.Maximum = 16;
+            myPB.Minimum = 0;
+           
+            k = 0;
+           
+            Thread t = new Thread(th);
+            //allocating them
+
+            for (int j = 0; j < 16; j++)
+            {
+
+
+                r_array[j] = new RowDefinition();
+                c_array[j] = new ColumnDefinition();
+                r_array[j].Height = new GridLength(20);
+                c_array[j].Width = new GridLength(45);
+                myGrid.RowDefinitions.Add(r_array[j]);
+                myGrid.ColumnDefinitions.Add(c_array[j]);
+
+            }
+
+            
+
+            for (int j = 0; j < 16; j++)
+            {
+
+                for (int i = 0; i < 16; i++)
+                {
+                    //make a textbox each time
+                    txt[k] = new TextBox();
+                    txt[k].LostFocus += TB_LostFocusHandler;
+                    txt[k].Tag = k;
+                    Grid.SetColumn(txt[k], i);
+                    Grid.SetRow(txt[k], j);
+                    myGrid.Children.Add(txt[k]);
+                    k++;
+
+                }
+            }
+          
+            t.Start();
+
+        }
+
+        private void TB_LostFocusHandler(object sender, RoutedEventArgs e)
+        {
+            TextBox tb = (TextBox)sender;
+            MessageBox.Show("Changed: " +  (int)tb.Tag);
+        }
+
+        private void ProgressBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+
+
+
+        }
+        private void UpdateBar( int index)
+        {
+            if (index != 16)
+            {
+               // myPB.Value = index;
+                myPB.Value += 1;
+               
+            }
+            else
+            {
+              
+                myPB.Value = myPB.Maximum;
+            }
+        }
+
+  
+        
+
+    }
+}
