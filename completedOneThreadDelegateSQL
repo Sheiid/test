@@ -1,0 +1,194 @@
+using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using MySql.Data.MySqlClient;
+
+namespace sqlComplicated
+{
+    /// <summary>
+    /// Logica di interazione per MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+
+        static MySqlConnection conn = new MySqlConnection();
+        static MySqlCommand com;
+        TextBox[] txtBox = new TextBox[256];
+
+        //verify safe state of thread 
+      
+        public delegate void myDelegate(int index);
+
+        //int number is the number of textboxes we have in our data table
+
+        public delegate void read_values(int number);
+
+
+        public MainWindow()
+        {
+            InitializeComponent();
+
+            myPB.Minimum = 0;
+            myPB.Maximum = 10;
+
+            Thread t = new Thread(th);
+
+            conn.ConnectionString = "SERVER=192.168.1.9; USER=sheida;PASSWORD=benvenuto;DATABASE=eltra;SSLMODE=none";
+
+            try
+            {
+                conn.Open();
+                
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+            t.Start();
+
+        }
+
+
+        private void th()
+        {
+           
+            //leggere i dati che esistono nella mia tabella!
+          
+            try
+            {
+                //now I need a query to show everything from my datatable in to my listView
+                String query = "SELECT * FROM eltra_params_project;";
+
+                //create a command
+                com = new MySqlCommand(query, conn);
+
+                //create a data Reader and execute the command
+                MySqlDataReader dataReader = com.ExecuteReader();
+              
+                while (dataReader.Read())
+                {
+                    //elements come from my query
+
+                    txtBox[i].Dispatcher.Invoke(new read_values(this.readValue), new Object[] { });
+
+                    myPB.Dispatcher.Invoke(new myDelegate(this.updateBar), new Object[] { });
+                    logForm.Items.Add(dataReader["description"] + "");
+                    //invoke 
+                }
+                dataReader.Close();
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+
+            
+        }
+
+        private void updateBar(int index)
+        {
+            if (index != 100)
+            {
+                myPB.Value += 1;
+            }
+            else
+            {
+               
+                myPB.Value = myPB.Maximum;
+            }
+        }
+
+        private void ListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
+        }
+        //new :
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+
+            //insert a new description description is unique!
+            //write to my textBox a new Description
+            
+            String descrp = inputText.Text;
+            String query = "INSERT INTO eltra_params_project (description) VALUES ('"+ descrp+"');";
+
+            if (!String.IsNullOrEmpty(descrp))
+            {
+                try
+                {
+                    com = new MySqlCommand(query, conn);
+                    
+                    //if com doesnt exist already add it to my listView
+                    
+                    logForm.Items.Add(com);
+                    com.ExecuteNonQuery();
+
+                }
+                catch(Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+
+            }
+
+
+        }
+        //Refresh
+        private void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+            //when I click refresh I want from my program to show any data exists in my dataTable eltra_params_project
+
+            try
+            {
+                //now I need a query to show everything from my table in to my listView
+                String query = "SELECT * FROM eltra_params_project;";
+
+                //create a command
+                com = new MySqlCommand(query, conn);
+
+                //create a data Reader and execute the command
+                MySqlDataReader dataReader = com.ExecuteReader();
+
+                while (dataReader.Read())
+                {
+                //elements come from my query
+
+                    //logForm.Items.Add(dataReader["eid"]+"");
+                    logForm.Items.Add(dataReader["description"] + "");
+
+                }
+
+                dataReader.Close();
+
+            }catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+
+        }
+
+        private void inputText_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
+        }
+
+        private void ProgressBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+
+        }
+    }
+}
