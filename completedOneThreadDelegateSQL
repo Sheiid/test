@@ -24,39 +24,46 @@ namespace sqlComplicated
     public partial class MainWindow : Window
     {
 
-        static MySqlConnection conn = new MySqlConnection();
+         MySqlConnection conn=new MySqlConnection();
         static MySqlCommand com;
-        TextBox[] txtBox = new TextBox[256];
+        Object[] obj=new Object[2];
+        
+       String descrp;
 
-        //verify safe state of thread 
       
-        public delegate void myDelegate(int index);
+        //verify safe state of thread 
+        //I need to know the position of my dataTable to know when it finishes
 
-        //int number is the number of textboxes we have in our data table
+        public delegate void myDelegate(int what,Object value);
+        public delegate void myDel(Object value);
 
-        public delegate void read_values(int number);
+  
+        public bool open_connection()
+        {
+            conn.ConnectionString = "SERVER=192.168.1.9; USER=sheida;PASSWORD=benvenuto;DATABASE=eltra;SSLMODE=none";
+            try
+            {
+                conn.Open();
 
+            }catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                return false;
+            }
+            return true;
+        }
+        public void close_connection()
+        {
+            conn.Close();
+            
+        }
 
         public MainWindow()
         {
             InitializeComponent();
 
-            myPB.Minimum = 0;
-            myPB.Maximum = 10;
-
+           
             Thread t = new Thread(th);
-
-            conn.ConnectionString = "SERVER=192.168.1.9; USER=sheida;PASSWORD=benvenuto;DATABASE=eltra;SSLMODE=none";
-
-            try
-            {
-                conn.Open();
-                
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message);
-            }
             t.Start();
 
         }
@@ -64,94 +71,120 @@ namespace sqlComplicated
 
         private void th()
         {
-           
-            //leggere i dati che esistono nella mia tabella!
-          
-            try
-            {
-                //now I need a query to show everything from my datatable in to my listView
-                String query = "SELECT * FROM eltra_params_project;";
+            open_connection();
+            Delegate pbBar = new myDelegate(this.updateListView);
 
-                //create a command
-                com = new MySqlCommand(query, conn);
-
-                //create a data Reader and execute the command
-                MySqlDataReader dataReader = com.ExecuteReader();
-              
-                while (dataReader.Read())
-                {
-                    //elements come from my query
-
-                    txtBox[i].Dispatcher.Invoke(new read_values(this.readValue), new Object[] { });
-
-                    myPB.Dispatcher.Invoke(new myDelegate(this.updateBar), new Object[] { });
-                    logForm.Items.Add(dataReader["description"] + "");
-                    //invoke 
-                }
-                dataReader.Close();
-
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message);
-            }
-
+            String query = "SELECT COUNT(*) FROM eltra_params_project;";
             
+             com = new MySqlCommand(query,this.conn);
+
+                    //count is the number of my data in my dataTable
+                    int count = int.Parse(com.ExecuteScalar()+"");
+
+                    //setting the BAR values!!!
+                    obj[0] =0;
+                    obj[1] = count;
+                    myPB.Dispatcher.Invoke(new myDelegate(this.updateListView),obj);
+
+                    //create a data Reader and execute the command
+                    query = "SELECT * FROM eltra_params_project;";
+                    com = new MySqlCommand(query, conn);
+
+                    MySqlDataReader dataReader = com.ExecuteReader();
+
+                    while (dataReader.Read())
+                    {
+                        //elements come from my query
+
+                        String data = dataReader["description"].ToString();
+                        obj[0] = 1;
+                        obj[1] = data;
+                        logForm.Dispatcher.Invoke(new myDelegate(this.updateListView), obj);
+                    }
+
+
+            close_connection();  
+           
         }
 
-        private void updateBar(int index)
+        private void updateListView(int what, object value)
         {
-            if (index != 100)
+            switch (what)
             {
-                myPB.Value += 1;
-            }
-            else
-            {
-               
-                myPB.Value = myPB.Maximum;
+                case 0:
+                    this.myPB.Maximum = (int)value;
+                    this.myPB.Value = 0;
+                    break;
+                case 1:
+                    this.logForm.Items.Add((string)value);
+                    this.myPB.Value++;
+                    break;
             }
         }
+
+      
+       
 
         private void ListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
 
         }
-        //new :
-        private void Button_Click(object sender, RoutedEventArgs e)
+
+        //new Button:
+
+
+        public void Button_Click(object sender, RoutedEventArgs e)
         {
 
-            //insert a new description description is unique!
-            //write to my textBox a new Description
-            
-            String descrp = inputText.Text;
-            String query = "INSERT INTO eltra_params_project (description) VALUES ('"+ descrp+"');";
+            Thread tid = new Thread(thNew);
+            descrp = inputText.Text;
+          open_connection();
+
+            tid.Start();
+         
+           close_connection();
+
+
+        }
+
+        public void thNew()
+        {
+           
+            String query = "INSERT INTO eltra_params_project (description) VALUES ('" + descrp + "');";
 
             if (!String.IsNullOrEmpty(descrp))
             {
                 try
                 {
-                    com = new MySqlCommand(query, conn);
-                    
-                    //if com doesnt exist already add it to my listView
-                    
-                    logForm.Items.Add(com);
+                    /*com = new MySqlCommand(query, this.conn);
+                    //logForm.Dispatcher.Invoke(new myDelegate(this._update), obj);
+                    //logForm.Items.Add(descrp);
                     com.ExecuteNonQuery();
+                    */
 
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     MessageBox.Show(ex.Message);
                 }
 
+
             }
-
-
+           
         }
-        //Refresh
+
+       /* private void _update(object value)
+        {
+            
+            
+        }*/
+
+
+        //Refresh Button
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
             //when I click refresh I want from my program to show any data exists in my dataTable eltra_params_project
-
+            open_connection();
             try
             {
                 //now I need a query to show everything from my table in to my listView
@@ -178,8 +211,10 @@ namespace sqlComplicated
             {
                 MessageBox.Show(ex.Message);
             }
-
+            close_connection();
         }
+        
+
 
         private void inputText_TextChanged(object sender, TextChangedEventArgs e)
         {
