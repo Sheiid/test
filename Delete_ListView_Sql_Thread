@@ -1,0 +1,392 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using MySql.Data.MySqlClient;
+/*
+ * new Button should insert new value by thread
+ * 
+ * and show the data in my data Table in its fuction !
+ * 
+ * refresh show all the data exsisting before in my dataTable
+ * 
+ * Delete button delete any data I select in my ListView
+ * 
+ * /
+ * */
+namespace sqlComplicated
+{
+    /// <summary>
+    /// Logica di interazione per MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+
+        MySqlConnection conn=new MySqlConnection();
+        static MySqlCommand com;
+        Thread tid;
+        
+        Object[] obj=new Object[2];
+        
+       String descrp;
+        String selected;
+        
+
+        //verify safe state of thread 
+        //I need to know the position of my dataTable to know when it finishes
+
+        public delegate void myDelegate(int what,Object value);
+        
+
+  
+        public bool open_connection()
+        {
+            String cnctStrng = "SERVER=192.168.1.9; USER=sheida;PASSWORD=benvenuto;DATABASE=eltra;SSLMODE=none";
+            conn = new MySqlConnection(cnctStrng);
+            
+            try
+            {
+                conn.Open();
+
+            }catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                return false;
+            }
+            return true;
+        }
+        public void close_connection()
+        {
+            conn.Close();
+            
+        }
+
+        public MainWindow()
+        {
+            InitializeComponent();
+
+           
+            Thread t = new Thread(th);
+           
+            t.Start();
+
+        }
+
+
+        private void th()
+        {
+            open_connection();
+            Delegate pbBar = new myDelegate(this.updateListView);
+
+            String query = "SELECT COUNT(*) FROM eltra_params_project;";
+            
+             com = new MySqlCommand(query,this.conn);
+
+                    //count is the number of my data in my dataTable
+                    int count = int.Parse(com.ExecuteScalar()+"");
+
+                    //setting the BAR values!!!
+                    obj[0] =0;
+                    obj[1] = count;
+                    myPB.Dispatcher.Invoke(new myDelegate(this.updateListView),obj);
+
+                    //create a data Reader and execute the command
+                    query = "SELECT * FROM eltra_params_project;";
+                    com = new MySqlCommand(query, conn);
+
+                    MySqlDataReader dataReader = com.ExecuteReader();
+            try
+            {
+                while (dataReader.Read())
+                {
+
+                    String data = dataReader["description"].ToString();
+                    obj[0] = 1;
+                    obj[1] = data;
+                    logForm.Dispatcher.Invoke(new myDelegate(this.updateListView), obj);
+
+                }
+
+              dataReader.Close();
+              dataReader.Dispose();
+
+
+            }catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+                   
+            close_connection();
+              
+
+
+           
+        }
+
+        private void updateListView(int what, object value)
+        {
+            switch (what)
+            {
+                case 0:
+                    this.myPB.Maximum = (int)value;
+                    this.myPB.Value = 0;
+                    break;
+                case 1:
+                    this.logForm.Items.Add((string)value);
+                    this.myPB.Value++;
+                    break;
+            }
+        }
+
+      
+       
+
+        private void ListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
+        }
+
+        //new Button:
+        public void Button_Click(object sender, RoutedEventArgs e)
+        {
+            
+            tid = new Thread(thNew);
+            descrp = inputText.Text;
+            tid.Start();
+            logForm.Items.Clear();
+          
+           // tid2.Start();
+      
+        }
+
+      
+        public void thNew()
+        {
+
+            
+            String query2 = "INSERT INTO eltra_params_project (description) VALUES ('" + descrp + "');";
+
+            if (!String.IsNullOrEmpty(descrp))
+            {
+                open_connection();
+
+                com = new MySqlCommand(query2, this.conn);
+                MySqlDataReader dataReader = com.ExecuteReader();
+              
+
+                try
+                {
+                    
+                    while (dataReader.Read())
+                    {
+                    
+                        String data = dataReader["description"].ToString();
+                        obj[0] = 1;
+                        obj[1] = data;
+                        logForm.Dispatcher.Invoke(new myDelegate(this.updateListView), obj);
+                       
+                    }
+                    dataReader.Close();
+                    dataReader.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("!!Error on new button!!!",ex.Message);
+                }
+
+
+            }
+             close_connection();
+            
+
+            open_connection();
+            String query = "SELECT DISTINCT * FROM eltra_params_project;";
+            com = new MySqlCommand(query, conn);
+
+            try
+            {
+
+             MySqlDataReader data_reader = com.ExecuteReader();
+
+
+                if (data_reader != null)
+                {
+                    while (data_reader.Read())
+
+                    {
+
+                        // logForm.Items.Add(data_reader["description"] + "");
+                        String data = data_reader["description"].ToString();
+                        obj[0] = 1;
+                        obj[1] = data;
+                        logForm.Dispatcher.Invoke(new myDelegate(this.updateListView), obj);
+                    }
+
+                }
+
+                data_reader.Close();
+                data_reader.Dispose();
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(" error on New button ", ex.Message);
+            }
+
+            close_connection();
+
+
+        }
+
+
+
+        //Refresh Button
+        private void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+            //when I click refresh I want from my program to show any data exists in my dataTable eltra_params_project
+            open_connection();
+            logForm.Items.Clear();
+            try
+            {
+                //now I need a query to show everything from my table in to my listView
+                String query = "SELECT DISTINCT * FROM eltra_params_project;";
+
+                //create a command
+                com = new MySqlCommand(query, conn);
+
+                //create a data Reader and execute the command
+               MySqlDataReader dataReaderr = com.ExecuteReader();
+
+                while (dataReaderr.Read())
+                {
+                   
+                    logForm.Items.Add(dataReaderr["description"] + "");
+                }
+                dataReaderr.Close();
+                dataReaderr.Dispose();
+                
+            }catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+            close_connection();
+         
+        }
+        
+
+
+        private void inputText_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
+        }
+
+        private void ProgressBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+
+        }
+
+        //Delete Button
+        private void Button_Click_2(object sender, RoutedEventArgs e)
+        {
+
+            Thread t_delete = new Thread(th_delete);
+            logForm.Focus();
+            selected=logForm.Items[0].ToString();
+            open_connection();
+            String query_Delete = "DELETE FROM eltra_params_project WHERE description='" + selected + "';";
+            com = new MySqlCommand(query_Delete, this.conn);
+            MySqlDataReader dataReader_delete = com.ExecuteReader();
+
+            try
+            {
+
+
+                while (dataReader_delete.Read())
+                {
+
+                    String data = dataReader_delete["description"].ToString();
+                    obj[0] = 1;
+                    obj[1] = data;
+                    logForm.Dispatcher.Invoke(new myDelegate(this.updateListView), obj);
+
+
+
+
+                }
+                dataReader_delete.Close();
+                dataReader_delete.Dispose();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("!!data not found!!", ex.Message);
+            }
+
+            close_connection();
+
+            //thread should show me all the data in my dataTable after deleting an item
+
+            t_delete.Start();
+            logForm.Items.Clear();
+        }
+
+
+        //thread should show all the list to me !!!
+        private void th_delete()
+        {
+            open_connection();
+
+            String query = "SELECT DISTINCT * FROM eltra_params_project;";
+            com = new MySqlCommand(query, conn);
+
+            try
+            {
+
+                MySqlDataReader data_reader = com.ExecuteReader();
+
+
+                if (data_reader != null)
+                {
+                    while (data_reader.Read())
+
+                    {
+
+                        // logForm.Items.Add(data_reader["description"] + "");
+                        String data = data_reader["description"].ToString();
+                        obj[0] = 1;
+                        obj[1] = data;
+                        logForm.Dispatcher.Invoke(new myDelegate(this.updateListView), obj);
+                    }
+
+                }
+
+                data_reader.Close();
+                data_reader.Dispose();
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("!", ex.Message);
+            }
+
+            close_connection();
+
+
+        }
+
+
+
+    }
+}
